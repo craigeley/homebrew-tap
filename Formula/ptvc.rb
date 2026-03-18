@@ -3,21 +3,11 @@ class Ptvc < Formula
 
   desc "Pro Tools Version Control — versioned snapshots of Pro Tools sessions via PTSL"
   homepage "https://github.com/craigeley/ptvc"
-  url "https://github.com/craigeley/ptvc/archive/refs/tags/v0.3.0.tar.gz"
-  sha256 "62e18f0154a4b9cc5df072917a5ea49caf034216b1c8007979878dbd4472226b"
+  url "https://github.com/craigeley/ptvc/archive/refs/tags/v0.3.1.tar.gz"
+  sha256 "5c013c476368a40dcc428f1d38650b9754c2811f8956d7a6bb88bbcc191c4788"
   license "MIT"
 
   depends_on "python@3.13"
-
-  resource "grpcio" do
-    url "https://files.pythonhosted.org/packages/06/8a/3d098f35c143a89520e568e6539cc098fcd294495910e359889ce8741c84/grpcio-1.78.0.tar.gz"
-    sha256 "7382b95189546f375c174f53a5fa873cef91c4b8005faa05cc5b3beea9c4f1c5"
-  end
-
-  resource "grpcio-tools" do
-    url "https://files.pythonhosted.org/packages/8b/d1/cbefe328653f746fd319c4377836a25ba64226e41c6a1d7d5cdbc87a459f/grpcio_tools-1.78.0.tar.gz"
-    sha256 "4b0dd86560274316e155d925158276f8564508193088bc43e20d3f5dff956b2b"
-  end
 
   resource "protobuf" do
     url "https://files.pythonhosted.org/packages/ba/25/7c72c307aafc96fa87062aa6291d9f7c94836e43214d43722e86037aac02/protobuf-6.33.5.tar.gz"
@@ -35,7 +25,18 @@ class Ptvc < Formula
   end
 
   def install
-    virtualenv_install_with_resources
+    venv = virtualenv_create(libexec, "python3.13")
+
+    # Install grpcio from PyPI wheel (bypasses Homebrew's --no-binary flag
+    # which forces source compilation — grpcio source builds fail without
+    # a full C++ toolchain, and third-party taps don't have bottling CI)
+    system libexec/"bin/pip", "install", "--no-deps", "grpcio==1.78.0"
+
+    # Install remaining pure-Python resources from source (standard approach)
+    venv.pip_install resources
+
+    # Install ptvc itself
+    venv.pip_install_and_link buildpath
   end
 
   test do
