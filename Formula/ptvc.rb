@@ -9,11 +9,6 @@ class Ptvc < Formula
 
   depends_on "python@3.13"
 
-  resource "grpcio" do
-    url "https://files.pythonhosted.org/packages/55/06/0b78408e938ac424100100fd081189451b472236e8a3a1f6500390dc4954/grpcio-1.78.0-cp313-cp313-macosx_11_0_universal2.whl"
-    sha256 "2bf5e2e163b356978b23652c4818ce4759d40f4712ee9ec5a83c4be6f8c23a3a"
-  end
-
   resource "protobuf" do
     url "https://files.pythonhosted.org/packages/ba/25/7c72c307aafc96fa87062aa6291d9f7c94836e43214d43722e86037aac02/protobuf-6.33.5.tar.gz"
     sha256 "6ddcac2a081f8b7b9642c09406bc6a4290128fce5f471cddd165960bb9119e5c"
@@ -30,7 +25,23 @@ class Ptvc < Formula
   end
 
   def install
-    virtualenv_install_with_resources
+    venv = virtualenv_create(libexec, "python3.13")
+
+    # Install grpcio from PyPI using pre-built wheel.
+    # Homebrew's pip helpers force --no-binary=:all: which requires compiling
+    # grpcio's C core from source — this fails without a full Xcode install.
+    # Third-party taps don't have bottling CI, so we bypass this for grpcio.
+    python = Formula["python@3.13"].opt_bin/"python3.13"
+    system python, "-m", "pip",
+           "--python=#{libexec}/bin/python",
+           "install", "--no-deps", "--ignore-installed",
+           "grpcio==1.78.0"
+
+    # Install remaining pure-Python resources normally
+    venv.pip_install resources
+
+    # Install ptvc itself
+    venv.pip_install_and_link buildpath
   end
 
   test do
